@@ -20,9 +20,9 @@ public class Main {
         Guest guest11 = new Guest("Adrien", "adrien@test.com", "04467321");
 
         Event event1 = new Event("Black Tie Gala", "O2 Arena" , LocalDate.of(2025, 1, 18));
-        Event event2 = new Event("Masquerade Ball", "CopperBox Arena" , LocalDate.of(2025, 5, 17));
+        Event event2 = new Event("Masquerade Ball", "CopperBox Arena" , LocalDate.of(2021, 5, 17));
         Event event3 = new Event("80s Retro Night", "Nobu" , LocalDate.of(2025, 7, 7));
-        Event event4 = new Event("Masquerade Ball", "Wembley Arena", LocalDate.of(2026, 1, 31));
+        Event event4 = new Event("Masquerade Ball", "Wembley Arena", LocalDate.of(2022, 1, 31));
 
         Connection connection = MySQLConnect.connectToDatabase("src/main/resources/application.properties");
 
@@ -53,26 +53,269 @@ public class Main {
 
         insertGuestsDB(allGuests, connection);
 
-        try {
-            fillEvents(allGuests, random, listOfEvents, connection);
-            eventGuestList(listOfEvents, connection);
+        fillEvents(allGuests, random, listOfEvents, connection);
+        eventGuestList(listOfEvents, connection);
+        insertingConfirmedGuests_DB(listOfEvents, allGuests, connection);
+        insertingDeclinedGuests_DB(listOfEvents, allGuests, connection);
+        insertingNoShownUpGuests_DB(listOfEvents, allGuests, connection);
 
-
-//        findByEmail("jacob@test.com", connection);
-//        findByName("Adrien", connection);
+//        findByEmail("george@test.com", connection, listOfEvents);
+//        findByName("Jacob", connection, listOfEvents);
 
 //        allGuestInfo(connection);
 //        mostReliable(connection);
 //        frequentNoShow(connection);
 //        listEvents(connection);
-//        lowAttendance(upcomingEvents);
+//        lowAttendance(connection);
 
-            String searchingTheme = "Masquerade Ball";
-//            themeLoyalty(listOfEvents, searchingTheme, allGuests);
+        String searchingTheme = "Masquerade Ball";
+        themeLoyalty(searchingTheme, connection);
+    }
+
+    private static void insertingConfirmedGuests_DB(List<Event> allEvents, List<Guest> allGuests, Connection connection){
+        for(Event event: allEvents){
+            if(!event.isCanceled()){
+                int eventId = 0;
+
+                // query za nalazenje event id u listi
+                String sqlEvent = "SELECT id FROM event WHERE theme = ? AND location = ? AND date = ?";
+
+                try (PreparedStatement stmt = connection.prepareStatement(sqlEvent)) {
+                    stmt.setString(1, event.getTheme());
+                    stmt.setString(2, event.getLocation());
+                    stmt.setString(3, event.getDate().toString());
+
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            eventId = rs.getInt("id");
+//                            System.out.println("Event ID: " + eventId);
+                        }
+                        else {
+                            System.out.println("Event not found.");
+                        }
+                    }
+
+                }
+                catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+
+                // query za nalazenje id gosta u listi potvrdjenih za event
+                for(Guest guest: allGuests){
+                    int guestId = 0;
+                    if(event.getConfirmed().contains(guest)){
+                        String sqlGuest = "SELECT id FROM guest WHERE name = ? AND email = ? AND number = ?";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sqlGuest)) {
+                            stmt.setString(1, guest.getName());
+                            stmt.setString(2, guest.getEmail());
+                            stmt.setString(3, guest.getNumber());
+
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    guestId = rs.getInt("id");
+//                                    System.out.println("Guest ID: " + guestId);
+                                }
+                                else {
+                                    System.out.println("Guest not found.");
+                                }
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+
+
+
+                        // query za dodavanje reda u tabeli confirmed koji se sastoji od eventID i guestID
+                        String sql = "INSERT INTO confirmed (event_id, guest_id) VALUES (?, ?)";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                            stmt.setInt(1, eventId);
+                            stmt.setInt(2, guestId);
+
+                            int rowsInserted = stmt.executeUpdate();
+
+                            if (rowsInserted > 0) {
+//                                System.out.println("Guest with id " + guestId + " has been successfully added for the event with the id " + eventId + " into the table confirmed.");
+                            }
+                            else {
+                                System.out.println("Insert failed. No rows affected.");
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
         }
-        catch (InterruptedException e) {
-            e.toString();
+//        System.out.println("------------------------");
+    }
+
+    private static void insertingDeclinedGuests_DB(List<Event> allEvents, List<Guest> allGuests, Connection connection){
+        for(Event event: allEvents){
+            if(!event.isCanceled()){
+                int eventId = 0;
+
+                // query za nalazenje event id u listi
+                String sqlEvent = "SELECT id FROM event WHERE theme = ? AND location = ? AND date = ?";
+
+                try (PreparedStatement stmt = connection.prepareStatement(sqlEvent)) {
+                    stmt.setString(1, event.getTheme());
+                    stmt.setString(2, event.getLocation());
+                    stmt.setString(3, event.getDate().toString());
+
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            eventId = rs.getInt("id");
+//                            System.out.println("Event ID: " + eventId);
+                        }
+                        else {
+                            System.out.println("Event not found.");
+                        }
+                    }
+
+                }
+                catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+
+                // query za nalazenje id gosta u listi potvrdjenih za event
+                for(Guest guest: allGuests){
+                    int guestId = 0;
+                    if(event.getDeclined().contains(guest)){
+                        String sqlGuest = "SELECT id FROM guest WHERE name = ? AND email = ? AND number = ?";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sqlGuest)) {
+                            stmt.setString(1, guest.getName());
+                            stmt.setString(2, guest.getEmail());
+                            stmt.setString(3, guest.getNumber());
+
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    guestId = rs.getInt("id");
+//                                    System.out.println("Guest ID: " + guestId);
+                                }
+                                else {
+                                    System.out.println("Guest not found.");
+                                }
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+
+
+
+                        // query za dodavanje reda u tabeli declined koji se sastoji od eventID i guestID
+                        String sql = "INSERT INTO declined (event_id, guest_id) VALUES (?, ?)";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                            stmt.setInt(1, eventId);
+                            stmt.setInt(2, guestId);
+
+                            int rowsInserted = stmt.executeUpdate();
+
+                            if (rowsInserted > 0) {
+//                                System.out.println("Guest with id " + guestId + " has been successfully added for the event with the id " + eventId + " into the table declined.");
+                            }
+                            else {
+                                System.out.println("Insert failed. No rows affected.");
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
         }
+//        System.out.println("------------------------");
+    }
+
+    private static void insertingNoShownUpGuests_DB(List<Event> allEvents, List<Guest> allGuests, Connection connection){
+        for(Event event: allEvents){
+            if(!event.isCanceled()){
+                int eventId = 0;
+
+                // query za nalazenje event id u listi
+                String sqlEvent = "SELECT id FROM event WHERE theme = ? AND location = ? AND date = ?";
+
+                try (PreparedStatement stmt = connection.prepareStatement(sqlEvent)) {
+                    stmt.setString(1, event.getTheme());
+                    stmt.setString(2, event.getLocation());
+                    stmt.setString(3, event.getDate().toString());
+
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            eventId = rs.getInt("id");
+//                            System.out.println("Event ID: " + eventId);
+                        }
+                        else {
+                            System.out.println("Event not found.");
+                        }
+                    }
+
+                }
+                catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+
+                // query za nalazenje id gosta u listi potvrdjenih za event
+                for(Guest guest: allGuests){
+                    int guestId = 0;
+                    if(event.getConfDidntShow().contains(guest)){
+                        String sqlGuest = "SELECT id FROM guest WHERE name = ? AND email = ? AND number = ?";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sqlGuest)) {
+                            stmt.setString(1, guest.getName());
+                            stmt.setString(2, guest.getEmail());
+                            stmt.setString(3, guest.getNumber());
+
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    guestId = rs.getInt("id");
+//                                    System.out.println("Guest ID: " + guestId);
+                                }
+                                else {
+                                    System.out.println("Guest not found.");
+                                }
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+
+
+
+                        // query za dodavanje reda u tabeli notshownup koji se sastoji od eventID i guestID
+                        String sql = "INSERT INTO notshownup (event_id, guest_id) VALUES (?, ?)";
+
+                        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                            stmt.setInt(1, eventId);
+                            stmt.setInt(2, guestId);
+
+                            int rowsInserted = stmt.executeUpdate();
+
+                            if (rowsInserted > 0) {
+//                                System.out.println("Guest with id " + guestId + " has been successfully added for the event with the id " + eventId + " into the table notshownup.");
+                            }
+                            else {
+                                System.out.println("Insert failed. No rows affected.");
+                            }
+                        }
+                        catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+//        System.out.println("------------------------");
     }
 
     private static void insertEventsDB(List<Event> listOfEvents, Connection connection) {
@@ -115,56 +358,44 @@ public class Main {
         }
     }
 
-    private static void themeLoyalty(List<Event> listOfEvents, String searchingTheme, List<Guest> allGuests) {
-        boolean themeExists = false;
-        for(Event event: listOfEvents){
-            if(searchingTheme.equals(event.getTheme())){
-                themeExists = true;
-                break;
-            }
-        }
+    private static void themeLoyalty(String searchingTheme, Connection connection) {
+        String sql = "SELECT guest.name, guest.email, guest.number " +
+                "FROM guest " +
+                "WHERE NOT EXISTS ( " +
+                "    SELECT 1 " +
+                "    FROM event " +
+                "    WHERE event.theme = ? " +
+                "    AND NOT EXISTS ( " +
+                "        SELECT 1 " +
+                "        FROM confirmed " +
+                "        WHERE confirmed.event_id = event.id " +
+                "        AND confirmed.guest_id = guest.id " +
+                "    ) " +
+                ")";
 
-        if(themeExists){
-            System.out.println("Guests who attended every event with the theme: " + searchingTheme);
-            for(Guest guest: allGuests){
-                boolean attended = true;
-                for(Event event: listOfEvents){
-                    // ako se teme podudaraju ispitujem da li je gost bio prisutan
-                    if(event.getTheme().equals(searchingTheme)){
-                        // ako nije bio pozvan, ne moze da prisustvuje
-                        if(!event.getInvited().contains(guest)){
-                            attended = false;
-                            break;
-                        }
-                        // ako je bio pozvan ali je odbio, ne moze da prisustvuje
-                        else if((event.getInvited().contains(guest))
-                                && (event.getDeclined().contains(guest))){
-                            attended = false;
-                            break;
-                        }
-                        // ako je bio pozvan, prihvatio pa zatim otkazao onda ne moze da prisustvuje
-                        else if((event.getInvited().contains(guest))
-                                && (event.getConfDidntShow().contains(guest))){
-                            attended = false;
-                            break;
-                        }
-                    }
-                }
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, searchingTheme);
 
+            try (ResultSet rs = stmt.executeQuery()) {
+                System.out.println("Guests who attended every event with the theme: " + searchingTheme);
 
-                if(attended){
-                    System.out.println(guest);
+                while (rs.next()) {
+                    String name = rs.getString("name");
+                    String email = rs.getString("email");
+                    String number = rs.getString("number");
+
+                    System.out.println("Guest: " + name + ", email: " + email + ", number: " + number + " has attended every event with the theme: " + searchingTheme);
                 }
             }
-            System.out.println("-----------------------");
         }
-        else{
-            System.out.println("The given theme doesn't exist");
-            System.out.println("--------------------------");
+        catch (SQLException e) {
+            e.printStackTrace();
         }
+
+        System.out.println("-----------------------");
     }
 
-    private static void fillEvents(List<Guest> allGuests, Random random, List<Event> listOfEvents, Connection connection) throws InterruptedException {
+    private static void fillEvents(List<Guest> allGuests, Random random, List<Event> listOfEvents, Connection connection) {
         for(Event event: listOfEvents){
             int eventSize = random.nextInt(allGuests.size()) + 1;
 
@@ -213,6 +444,7 @@ public class Main {
             }
 
             if(cancelResult){
+                System.out.println();
                 System.out.println("No guest list for " + event);
                 System.out.println("-------------------");
                 continue;
@@ -234,6 +466,7 @@ public class Main {
             for(Guest guest: event.getDeclined()){
                 System.out.println(guest);
             }
+            System.out.println();
         }
 		System.out.println("--------------------------");
     }
@@ -306,13 +539,34 @@ public class Main {
         }
     }
 
-    private static void lowAttendance(List<Event> upcomingEvents) {
-        System.out.println("Upcoming events where less than 5 guests have confirmed their attendance");
-        for(Event tmpEvent: upcomingEvents){
-            if(tmpEvent.getConfirmed().size() < 5){
-                System.out.println(tmpEvent);
+    private static void lowAttendance(Connection connection) {
+        String sql = "SELECT theme, location, date FROM event " +
+                "WHERE id IN ( " +
+                "    SELECT event_id " +
+                "    FROM confirmed " +
+                "    GROUP BY event_id " +
+                "    HAVING COUNT(guest_id) < 5 " +
+                ") " +
+                "AND upcoming = 1";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            System.out.println("Upcoming Events with Less than 5 Confirmed Guests:");
+
+            while (rs.next()) {
+                String theme = rs.getString("theme");
+                String location = rs.getString("location");
+                Date eventDate = rs.getDate("date");
+
+                System.out.println("Theme: " + theme + ", location: " + location + ", date: " + eventDate);
             }
+
         }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("----------------------------");
     }
 
     private static void listEvents(Connection connection) {
@@ -455,75 +709,78 @@ public class Main {
 		}
     }
 
-    public static void findByName(String name, Connection connection){
-        String sql = "SELECT * FROM guest WHERE name = ?";
+    public static void findByName(String name, Connection connection, List<Event> allEvents){
+        boolean found = false;
+        for(Event event: allEvents){
+            for(Guest guest: event.getInvited()){
+                if(guest.getName().equals(name)){
+                    found = true;
+                    String sql = "SELECT * FROM guest WHERE name = ?";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, name);
+                    try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                        stmt.setString(1, name);
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String guestName = rs.getString("name");
-                    String email = rs.getString("email");
-                    String number = rs.getString("number");
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                String guestName = rs.getString("name");
+                                String email = rs.getString("email");
+                                String number = rs.getString("number");
 
-                    System.out.println("Name: " + guestName + ", email: " + email + ", number: " + number);
-                }
-                else {
-                    System.out.println("No guest found with the name: " + name);
+                                System.out.println("Name: " + guestName + ", email: " + email + ", number: " + number +
+                                        ", was invited to the event: " + event.getTheme() + ", location: " + event.getLocation() +
+                                        ", on: " + event.getDate().toString());
+                            }
+                        }
+                    }
+                    catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-		finally{
-			System.out.println("----------------");
-		}
 
-//        Optional<Guest> res = event.findGuestByName(name);
-//        if(res.isPresent()){
-//            System.out.println(res.get());
-//        }
-//        else{
-//            System.out.println("Guest with the name " + name + " was not on the list of invited people for the event " + event.getTheme());
-//        }
+        if(!found){
+            System.out.println("Guest with the name " + name + " wasn't found on any invitation list");
+        }
+
+        System.out.println("----------------");
     }
 
-    public static void findByEmail(String email, Connection connection){
-        String sql = "SELECT * FROM guest WHERE email = ?";
+    public static void findByEmail(String email, Connection connection, List<Event> allEvents){
+        boolean found = false;
+        for(Event event: allEvents){
+            for(Guest guest: event.getInvited()){
+                if(guest.getEmail().equals(email)){
+                    found = true;
+                    String sql = "SELECT * FROM guest WHERE email = ?";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, email);
+                    try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                        stmt.setString(1, email);
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String name = rs.getString("name");
-                    String guestEmail = rs.getString("email");
-                    String number = rs.getString("number");
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                String name = rs.getString("name");
+                                String guestEmail = rs.getString("email");
+                                String number = rs.getString("number");
 
-                    System.out.println("Name: " + name + ", email: " + guestEmail + ", number: " + number);
-                }
-                else {
-                    System.out.println("No guest found with the email: " + email);
+                                System.out.println("Name: " + name + ", email: " + guestEmail + ", number: " + number +
+                                        ", was invited to the event: " + event.getTheme() + ", location: " + event.getLocation() +
+                                        ", on: " + event.getDate().toString());
+                            }
+                        }
+                    }
+                    catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
-        catch (SQLException e) {
-            e.printStackTrace();
+
+        if(!found){
+            System.out.println("Guest with the email " + email + " wasn't found on any invitation list");
         }
-		finally{
-			System.out.println("----------------");
-		}
 
-
-//        Optional<Guest> res = event.findGuestByEmail(email);
-//        if(res.isPresent()){
-//            System.out.println(res.get());
-//        }
-//        else{
-//            System.out.println("Guest with the email " + email + " was not on the list of invited people for the event " + event.getTheme());
-//        }
+        System.out.println("----------------");
     }
 
     public static void allGuestInfo(Connection connection){

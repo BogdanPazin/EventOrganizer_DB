@@ -22,7 +22,6 @@ public class Event {
     private boolean completed;
     private boolean canceled = false;
     private boolean upcoming;
-    private List<EmailSchedule.EmailTask> immediateEmails = new ArrayList<>();
     private List<EmailSchedule.EmailTask> scheduledEmails = new ArrayList<>();
     EmailSchedule schedule = new EmailSchedule();
     public Event(String theme, String location, LocalDate date) {
@@ -59,7 +58,7 @@ public class Event {
         }
     }
 
-    public void addInvited(Guest guest, Connection connection) throws InterruptedException {
+    public void addInvited(Guest guest, Connection connection) {
         if(completed){
             invited.add(guest);
 
@@ -68,17 +67,9 @@ public class Event {
         else{
             casesForActiveInactiveEvents(guest, connection);
         }
-
-//        if(!completed){
-//            casesForActiveInactiveEvents(guest, connection);
-//        }
-//        else{
-//            System.out.println("You can't add " + guest.getName() + " to " + getTheme() + " event, because it's already completed!");
-//            throw new RuntimeException("You can't add guests to " + getTheme() + " because it's a completed event!");
-//        }
     }
 
-    private void casesForActiveInactiveEvents(Guest guest, Connection connection) throws InterruptedException {
+    private void casesForActiveInactiveEvents(Guest guest, Connection connection) {
         // event i dalje aktivan
         if(!canceled){
             invited.add(guest);
@@ -90,13 +81,13 @@ public class Event {
             System.out.println(this + " is canceled");
             for(Guest tmpGuest: confirmed){
                 System.out.println("Sending email to notify about the cancellation of " + getTheme() + " event to " + tmpGuest.getEmail());
-                immediateEmails.add(new EmailSchedule.EmailTask(tmpGuest.getEmail(), "Event Cancellation", "The event " + this + " has been canceled", LocalDate.now()));
+                scheduledEmails.add(new EmailSchedule.EmailTask(tmpGuest.getEmail(), "Event Cancellation", "The event " + this + " has been canceled", LocalDate.now()));
             }
-            schedule.processEmails(immediateEmails, scheduledEmails);
+            schedule.processEmails(scheduledEmails);
         }
     }
 
-    private void confirmOrDeclineEvent(Guest guest, Connection connection) throws InterruptedException {
+    private void confirmOrDeclineEvent(Guest guest, Connection connection) {
         //75% sansa da potvrde
         if(random.nextDouble() < 0.75){
             confirmed.add(guest);
@@ -106,7 +97,7 @@ public class Event {
             if(!completed){
                 System.out.println("An email reminder for the " + this + " will be sent on " + getDate().minusDays(1) + " to " + guest.getName());
                 scheduledEmails.add(new EmailSchedule.EmailTask(guest.getEmail(), "Event reminder", "This is a reminder for the event " + this, getDate().minusDays(1)));
-                schedule.processEmails(immediateEmails, scheduledEmails);
+                schedule.processEmails(scheduledEmails);
             }
 
             checkIfAttendsAfterConfirmation(guest, connection);

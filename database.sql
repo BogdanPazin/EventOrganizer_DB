@@ -1,6 +1,10 @@
 CREATE DATABASE IF NOT EXISTS `events`;
 USE `events`;
 
+DROP TABLE IF EXISTS `confirmed`;
+DROP TABLE IF EXISTS `declined`;
+DROP TABLE IF EXISTS `notShownUp`;
+
 DROP TABLE IF EXISTS `guest`;
 CREATE TABLE `guest` (
 	`id` int(99) NOT NULL AUTO_INCREMENT,
@@ -24,4 +28,31 @@ CREATE TABLE `event` (
     `canceled` TINYINT(1) DEFAULT 0,
     `upcoming` TINYINT(1) DEFAULT 0,
 	PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `confirmed` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `event_id` INT NOT NULL,
+    `guest_id` INT NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`event_id`) REFERENCES `event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (`guest_id`) REFERENCES `guest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE `declined` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `event_id` INT NOT NULL,
+    `guest_id` INT NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`event_id`) REFERENCES `event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (`guest_id`) REFERENCES `guest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE `notShownUp` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `event_id` INT NOT NULL,
+    `guest_id` INT NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`event_id`) REFERENCES `event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (`guest_id`) REFERENCES `guest`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;

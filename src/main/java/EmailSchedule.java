@@ -4,10 +4,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public class EmailSchedule {
-    public void processEmails(List<EmailTask> immediateEmails, List<EmailTask> scheduledEmails) throws InterruptedException {
-        int immediateCount = immediateEmails.size();
-        CountDownLatch latch = new CountDownLatch(immediateCount);
-
+    public void processEmails(List<EmailTask> scheduledEmails) {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(scheduledEmails.size(), runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(true);
@@ -29,8 +26,6 @@ public class EmailSchedule {
                 System.out.println(email.to + " ");
             }
         }
-
-        latch.await();
     }
 
     public static class EmailTask {

@@ -20,8 +20,4 @@ public class MySQLConnect {
             return null;
         }
     }
-
-//    public static void main(String[] args) {
-//        Connection connection = connectToDatabase("path/to/application.properties");
-//    }
 }
