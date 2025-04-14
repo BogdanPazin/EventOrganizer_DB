@@ -466,9 +466,9 @@ public class Main {
             for(Guest guest: event.getDeclined()){
                 System.out.println(guest);
             }
-            System.out.println();
+
+            System.out.println("--------------------------");
         }
-		System.out.println("--------------------------");
     }
 
     private static void eventStatusCheck(List<Event> listOfEvents, Connection connection) {
@@ -687,6 +687,11 @@ public class Main {
     public static void mostReliable(Connection connection){
         String sql = "SELECT name, attended, confirmed FROM guest " +
                 "ORDER BY attended DESC, confirmed DESC LIMIT 5";
+
+//        String sql = "SELECT name, attended, confirmed FROM guest " +
+//                "ORDER BY CASE WHEN attended = 0 THEN 1 ELSE 0 END, " +
+//                "attended DESC, confirmed DESC " +
+//                "LIMIT 5";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
