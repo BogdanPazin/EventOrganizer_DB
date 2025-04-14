@@ -59,17 +59,17 @@ public class Main {
         insertingDeclinedGuests_DB(listOfEvents, allGuests, connection);
         insertingNoShownUpGuests_DB(listOfEvents, allGuests, connection);
 
-//        findByEmail("george@test.com", connection, listOfEvents);
-//        findByName("Jacob", connection, listOfEvents);
+//        findByEmail("jacob@test.com", connection, listOfEvents);
+//        findByName("George", connection, listOfEvents);
 
 //        allGuestInfo(connection);
 //        mostReliable(connection);
 //        frequentNoShow(connection);
-//        listEvents(connection);
+        listEvents(connection);
 //        lowAttendance(connection);
 
         String searchingTheme = "Masquerade Ball";
-        themeLoyalty(searchingTheme, connection);
+//        themeLoyalty(searchingTheme, connection);
     }
 
     private static void insertingConfirmedGuests_DB(List<Event> allEvents, List<Guest> allGuests, Connection connection){
@@ -359,22 +359,30 @@ public class Main {
     }
 
     private static void themeLoyalty(String searchingTheme, Connection connection) {
-        String sql = "SELECT guest.name, guest.email, guest.number " +
-                "FROM guest " +
-                "WHERE NOT EXISTS ( " +
-                "    SELECT 1 " +
-                "    FROM event " +
-                "    WHERE event.theme = ? " +
-                "    AND NOT EXISTS ( " +
-                "        SELECT 1 " +
-                "        FROM confirmed " +
-                "        WHERE confirmed.event_id = event.id " +
-                "        AND confirmed.guest_id = guest.id " +
-                "    ) " +
-                ")";
+        String sql = "SELECT g.id, g.name, g.email, g.number " +
+                "FROM guest g " +
+                "WHERE g.id IN (" +
+                "    SELECT c.guest_id " +
+                "    FROM confirmed c " +
+                "    JOIN event e ON c.event_id = e.id " +
+                "    WHERE e.theme = ? AND e.completed = 1 " +
+                "    GROUP BY c.guest_id " +
+                "    HAVING COUNT(DISTINCT c.event_id) = (" +
+                "        SELECT COUNT(*) FROM event WHERE theme = ? AND completed = 1))" +
+                "AND g.id NOT IN (" +
+                "    SELECT d.guest_id FROM declined d " +
+                "    JOIN event e ON d.event_id = e.id " +
+                "    WHERE e.theme = ?)" +
+                "AND g.id NOT IN (" +
+                "    SELECT n.guest_id FROM notShownUp n " +
+                "    JOIN event e ON n.event_id = e.id " +
+                "    WHERE e.theme = ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, searchingTheme);
+            stmt.setString(2, searchingTheme);
+            stmt.setString(3, searchingTheme);
+            stmt.setString(4, searchingTheme);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 System.out.println("Guests who attended every event with the theme: " + searchingTheme);
@@ -384,7 +392,7 @@ public class Main {
                     String email = rs.getString("email");
                     String number = rs.getString("number");
 
-                    System.out.println("Guest: " + name + ", email: " + email + ", number: " + number + " has attended every event with the theme: " + searchingTheme);
+                    System.out.println("Guest: " + name + ", email: " + email + ", number: " + number + ", has attended every event with the theme: " + searchingTheme);
                 }
             }
         }
